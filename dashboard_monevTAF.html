@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>Peta Monitoring dan Evaluasi TAF Tahun 2025</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- PapaParse -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    body { margin: 0; font-family: Arial, sans-serif; }
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      background: white; padding: 12px 20px; border-bottom: 1px solid #ddd;
+      position: relative; z-index: 1000;
+    }
+    .logo-container { display: flex; align-items: center; gap: 8px; margin-left: -6px; }
+    .logo-container img { height: 40px; }
+    .logo-text { display: flex; flex-direction: column; font-size: 14px; font-weight: bold; line-height: 1.2; }
+    .title { font-size: 24px; font-weight: bold; text-align: center; flex: 1; }
+    .right-container { display: flex; flex-direction: column; align-items: center; padding-right: 10px; }
+    .menu { display: flex; gap: 24px; margin-bottom: 4px; }
+    .menu a { text-decoration: none; color: black; font-weight: bold; font-size: 18px; cursor: pointer; }
+    .menu a.active { color: #0066ff; }
+    .bulan-wrapper { text-align: center; margin-left: 12px; }
+    .bulan-wrapper label { font-size: 14px; font-weight: bold; margin-right: 6px; }
+    .bulan-select { font-size: 16px; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+    #map { width: 100%; height: calc(100vh - 90px); }
+
+    .legend {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: #f0f5f0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.2);
+  font-size: 14px;
+  line-height: 1.4; /* lebih rapat */
+  z-index: 1001;
+}
+
+.legend-title {
+  font-weight: bold;
+  margin-bottom: 5px;
+  display: block;
+  text-align: left;
+}
+
+.legend div {
+  display: flex;
+  align-items: center; /* sejajar warna & teks */
+  margin-bottom: 2px;  /* sedikit jarak antar baris */
+}
+
+.legend .color-circle {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+  border: 1px solid #444;
+}
+
+    /* Modal chart overlay */
+    .chart-overlay {
+      position: absolute;
+      left: 50%; top: 12%;
+      transform: translateX(-50%);
+      width: 85%;
+      max-width: 1200px;
+      background: white;
+      border-radius: 8px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+      z-index: 1500;
+      display: none;
+    }
+    .chart-overlay.open { display: block; }
+    .chart-header {
+      display:flex; justify-content: space-between; align-items:center; margin-bottom: 12px;
+    }
+    .chart-title { font-weight: 700; font-size: 20px; }
+    .close-btn {
+      background: #fff; border: 0; color: #d33; font-size: 20px; cursor: pointer;
+    }
+
+    /* UPT chart area */
+    .upt-chart-area { width:100%; }
+    .upt-chart-area canvas { width:100% !important; height:360px !important; }
+
+    /* Rekap area side-by-side */
+    .rekap-grid { display:flex; gap:12px; }
+    .rekap-item { flex:1; min-height:380px; border:1px solid #eee; border-radius:6px; padding:6px; display:flex; flex-direction:column; }
+    .rekap-item iframe { width:100%; height:420px; border:0; }
+
+    /* small helper */
+    .note { font-size:13px; color:#555; margin-top:6px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-container">
+    <img src="Logo BMKG.png" alt="Logo BMKG">
+    <div class="logo-text">
+      <span>Tim Kerja Analisis dan Prakiraan</span>
+      <span>Meteorologi Penerbangan</span>
+    </div>
+  </div>
+
+  <div class="title">Peta Monitoring dan Evaluasi TAF Tahun 2025</div>
+
+  <div class="right-container">
+    <div class="menu">
+      <a id="capaianMenu">Capaian</a>
+      <a id="kualitasMenu">Kualitas</a>
+      <a id="visualisasiMenu">Visualisasi</a>
+    </div>
+
+    <div class="bulan-wrapper">
+      <label for="bulan">Pilihan:</label>
+      <select id="bulan" class="bulan-select">
+        <!-- isi di-generate dari JS -->
+      </select>
+    </div>
+  </div>
+</header>
+
+<div id="map"></div>
+<div class="legend" id="legend"></div>
+
+<!-- Chart overlay (single container reused for both UPT and Rekap) -->
+<div id="chartOverlay" class="chart-overlay" role="dialog" aria-hidden="true">
+  <div class="chart-header">
+    <div class="chart-title" id="chartTitle">Grafik</div>
+    <div>
+      <button id="closeChart" class="close-btn" title="Tutup">✕</button>
+    </div>
+  </div>
+
+  <!-- UPT Chart content -->
+  <div id="uptContent" style="display:none;">
+    <div class="note" id="uptNote"></div>
+    <div class="upt-chart-area">
+      <canvas id="uptChartCanvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Rekap content -->
+  <div id="rekapContent" style="display:none;">
+    <div class="rekap-grid">
+      <div class="rekap-item">
+        <div style="font-weight:700; margin-bottom:6px;"></div>
+        <!-- gunakan iframe dari google charts publik -->
+        <iframe id="rekapIframe1" src="" title="Rekap Capaian"></iframe>
+      </div>
+      <div class="rekap-item">
+        <div style="font-weight:700; margin-bottom:6px;"></div>
+        <iframe id="rekapIframe2" src="" title="Rekap Kualitas"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ====== Konfigurasi dasar ======
+  const map = L.map('map').setView([-2, 118], 5);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  const stationMarkers = L.layerGroup().addTo(map);
+
+  const SPREADSHEET_BASE = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTbxYIyW6MG1Letj4_Z8d5nCZ3tR58bSFEkgcgtAktt0UHa3BK5xUwOHqmdsdVY2X9Sq7qj7cVxtvoD/pub';
+  const sheetGIDs = {
+    'Januari': '0', 'Februari': '2032345901', 'Maret': '190361379',
+    'April': '697017973', 'Mei': '2029893093', 'Juni': '999771329',
+    'Juli': '1975617545', 'Agustus': '1867942087', 'September': '1896968478',
+    'Oktober': '1327775502', 'November': '1936131786', 'Desember': '1729797792'
+  };
+  const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+  // mode: '', 'capaian', 'kualitas', 'grafik'
+  let mode = '';
+  let grafikSub = null; // 'upt'|'rekap'
+  let currentUPTChart = null;
+
+  // ====== Helpers ======
+  function parsePercent(val) {
+    if (val === undefined || val === null) return NaN;
+    let s = val.toString().trim();
+    s = s.replace(/\s+/g, '');
+    s = s.replace('%','');
+    s = s.replace(',', '.');
+    const num = parseFloat(s);
+    return isNaN(num) ? NaN : num;
+  }
+
+  function findRowMatch(row, targetIcao, targetNama) {
+    const icaoCandidates = [row['Kode ICAO'], row['ICAO'], row['icao'], row['Kode'], row['KODE']].filter(Boolean);
+    const nameCandidates = [row['Nama Stasiun'], row['Nama'], row['STASIUN'], row['Stasiun']].filter(Boolean);
+    if (targetIcao) {
+      for (let c of icaoCandidates) if (c && c.toString().trim().toLowerCase() === targetIcao.toString().trim().toLowerCase()) return true;
+    }
+    if (targetNama) {
+      for (let c of nameCandidates) if (c && c.toString().trim().toLowerCase() === targetNama.toString().trim().toLowerCase()) return true;
+    }
+    return false;
+  }
+
+  function getValueFromRow(row, keys) {
+    for (let k of keys) {
+      if (row[k] !== undefined) return row[k];
+    }
+    return undefined;
+  }
+
+  // Color decision for capaian/kualitas (only used when a real month is selected)
+  function getColor(value) {
+    if (isNaN(value)) return 'gray';
+    if (mode === "capaian") {
+      if (value < 95) return 'red';
+      if (value >= 95 && value <= 99) return 'green';
+      if (value === 100) return 'blue';
+      return 'gray';
+    } else { // kualitas
+      if (value < 60) return 'red';
+      if (value >= 60 && value <= 79) return 'orange';
+      if (value >= 80 && value <= 99) return 'green';
+      if (value === 100) return 'blue';
+      return 'gray';
+    }
+  }
+
+  function updateLegend(counts, bulan) {
+    const legend = document.getElementById('legend');
+    if (!bulan || !MONTHS.includes(bulan)) { legend.innerHTML = ''; return; }
+    if (mode === "capaian") {
+      legend.innerHTML = `
+        <div class="legend-title">Keterangan Capaian ${bulan}:</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:gray;border-radius:50%;margin-right:8px;"></span> Data kosong : ${counts.gray||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:red;border-radius:50%;margin-right:8px;"></span> &lt; 95% : ${counts.red||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:green;border-radius:50%;margin-right:8px;"></span> 95% - 99% : ${counts.green||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:blue;border-radius:50%;margin-right:8px;"></span> 100% : ${counts.blue||0}</div>
+      `;
+    } else if (mode === "kualitas") {
+      legend.innerHTML = `
+        <div class="legend-title">Keterangan Kualitas ${bulan}:</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:gray;border-radius:50%;margin-right:8px;"></span> Data kosong : ${counts.gray||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:red;border-radius:50%;margin-right:8px;"></span> &lt; 60% : ${counts.red||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:orange;border-radius:50%;margin-right:8px;"></span> 60% - 79% : ${counts.orange||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:green;border-radius:50%;margin-right:8px;"></span> 80% - 99% : ${counts.green||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:blue;border-radius:50%;margin-right:8px;"></span> 100% : ${counts.blue||0}</div>
+      `;
+    } else {
+      legend.innerHTML = '';
+    }
+  }
+
+  // ====== Load data & render markers ======
+  // bulan: string month name OR '' (if empty -> show neutral/transparent markers)
+  // options.forceGrafikUPT: boolean to force blue markers (used when user picks GrafikUPT)
+  async function loadDataAndDisplay(bulan = '', options = {}) {
+    stationMarkers.clearLayers();
+    const counts = { gray: 0, red: 0, orange: 0, green: 0, blue: 0 };
+
+    // Decide if we should fetch real sheet: if bulan is valid month OR if forcing to show positions (like for GrafikUPT)
+    let gidToUse = null;
+    if (MONTHS.includes(bulan)) gidToUse = sheetGIDs[bulan];
+    else if (options.fetchPositionsFallback && sheetGIDs['Januari']) gidToUse = sheetGIDs['Januari']; // fetch Jan for lat/lon if needed
+
+    try {
+      let parsed = null;
+      if (gidToUse) {
+        const url = SPREADSHEET_BASE + '?gid=' + gidToUse + '&single=true&output=csv';
+        const response = await fetch(url);
+        const csvText = await response.text();
+        parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+      } else {
+        // no data to fetch: show nothing or use fallback sample? We'll attempt to fetch Januari to gather lat/lon but keep neutral if caller asked for fallback.
+        parsed = { data: [] };
+      }
+
+      // If parsed found rows, loop and render markers. If parsed empty, do nothing.
+      parsed.data.forEach(row => {
+        const lat = parseFloat(getValueFromRow(row, ['Lat','Lat ','LAT','Latitude','latitude']) || '');
+        const lon = parseFloat(getValueFromRow(row, ['Lon','Lon ','LON','Longitude','longitude']) || '');
+        const nama = getValueFromRow(row, ['Nama Stasiun','Nama','STASIUN','Stasiun']) || '';
+        const icao = getValueFromRow(row, ['Kode ICAO','ICAO','icao','Kode','KODE']) || '';
+
+        if (!isNaN(lat) && !isNaN(lon)) {
+          // determine nilai only if a proper month is selected
+          let nilai = NaN;
+          if (MONTHS.includes(bulan)) {
+            if (mode === "capaian") {
+              nilai = parsePercent(getValueFromRow(row, ['Capaian','Capaian (%)','Capaian(%)','CAPAIAN']));
+            } else if (mode === "kualitas") {
+              nilai = parsePercent(getValueFromRow(row, ['Kualitas','Kualitas (%)','Kualitas(%)','KUALITAS']));
+            }
+          }
+
+          // default neutral look: gray, transparent
+          let color = 'gray';
+          let fillOpacity = 0.32;
+
+          // if GrafikUPT mode forced, show blue (full opacity)
+          if (mode === 'grafik' && grafikSub === 'upt' && options.forceGrafikUPT) {
+            color = '#0b3d91'; // dark blue
+            fillOpacity = 0.9;
+          } else if (MONTHS.includes(bulan)) {
+            // Normal coloring when actual month selected
+            color = (mode === 'grafik' && grafikSub === 'upt') ? '#0b3d91' : getColor(nilai);
+            fillOpacity = 0.9;
+          }
+
+          const marker = L.circleMarker([lat, lon], {
+            radius: 7,
+            fillColor: color,
+            color: '#000',
+            weight: 1,
+            fillOpacity: fillOpacity
+          });
+marker.bindTooltip(`${icao ? icao + ' - ' : ''}${nama}`, {
+  permanent: false,
+  direction: 'top',
+  offset: [0, -4],
+  opacity: 0.9
+});
+          marker.customData = { icao, nama, row };
+
+          // attach popup / click handlers depending on mode
+          if (mode === "capaian" || mode === "kualitas") {
+            // popup detailed
+            let popupContent = `<b>${icao} (${nama})</b><br><table style="font-size:13px; border-collapse:collapse; margin-top:5px;">`;
+            if (mode === "capaian") {
+              popupContent += `<tr><td><b>Target</b></td><td>: ${row.Target || '-'}</td></tr>`;
+              popupContent += `<tr><td><b>Existing</b></td><td>: ${row.Existing || '-'}</td></tr>`;
+              popupContent += `<tr><td><b>Capaian</b></td><td>: ${isNaN(nilai) ? '-' : nilai + '%'}</td></tr>`;
+            } else {
+              popupContent += `<tr><td><b>Tanggal dan Jam</b></td><td>: ${row['Tanggal dan Jam'] || '-'}</td></tr>`;
+              popupContent += `<tr><td><b>Angin</b></td><td>: ${row['Angin'] || '-'}</td></tr>`;
+              popupContent += `<tr><td><b>Visibility</b></td><td>: ${row['Visibility'] || '-'}</td></tr>`;
+              popupContent += `<tr><td><b>Weather</b></td><td>: ${row['Weather'] || '-'}</td></tr>`;
+              popupContent += `<tr><td><b>Cloud</b></td><td>: ${row['Cloud'] || '-'}</td></tr>`;
+              popupContent += `<tr><td><b>Kecenderungan Perubahan</b></td><td>: ${row['Kecenderungan Perubahan'] || '-'}</td></tr>`;
+              popupContent += `<tr><td><b>Penutup</b></td><td>: ${row['Penutup'] || '-'}</td></tr>`;
+              popupContent += `<tr><td><b>Spasi</b></td><td>: ${row['Spasi'] || '-'}</td></tr>`;
+              popupContent += `<tr><td><b>Jumlah Kesalahan</b></td><td>: ${row['Jumlah Kesalahan'] || '-'}</td></tr>`;
+              popupContent += `<tr><td><b>Kualitas</b></td><td>: ${isNaN(parsePercent(getValueFromRow(row, ['Kualitas','Kualitas (%)','Kualitas(%)','KUALITAS']))) ? '-' : parsePercent(getValueFromRow(row, ['Kualitas','Kualitas (%)','Kualitas(%)','KUALITAS'])) + '%'}</td></tr>`;
+              if (row['Link Data']) popupContent += `<tr><td colspan="2" style="padding-top:6px;"><a href="${row['Link Data']}" target="_blank">📄 Lihat Data</a></td></tr>`;
+            }
+            popupContent += '</table>';
+            marker.bindPopup(popupContent);
+          } else if (mode === 'grafik' && grafikSub === 'upt') {
+            // grafik upt: clicking marker opens UPT chart
+            marker.on('click', async function(e) {
+              await openUPTChart(this.customData);
+            });
+          }
+
+          marker.addTo(stationMarkers);
+
+          // count legend for capaian/kualitas only when actual month selected
+          if (MONTHS.includes(bulan) && !(mode === 'grafik' && grafikSub === 'upt')) {
+            if (color === 'gray') counts.gray++;
+            else if (color === 'red') counts.red++;
+            else if (color === 'orange') counts.orange++;
+            else if (color === 'green') counts.green++;
+            else if (color === 'blue') counts.blue++;
+          }
+        }
+      });
+
+      // update legend if capaian/kualitas and a real month
+      if ((mode === 'capaian' || mode === 'kualitas') && MONTHS.includes(bulan)) {
+        updateLegend(counts, bulan);
+      } else {
+        updateLegend({}, ''); // clear legend
+      }
+
+    } catch (err) {
+      console.error("Gagal memuat data:", err);
+      alert("Tidak dapat mengambil data dari Google Sheets.");
+    }
+  }
+
+  // ====== Grafik UPT: ambil data untuk semua bulan dan plot untuk 1 station ======
+  async function openUPTChart(customData) {
+    if (!customData) return;
+    const { icao, nama } = customData;
+    const overlay = document.getElementById('chartOverlay');
+    const titleEl = document.getElementById('chartTitle');
+    const uptContent = document.getElementById('uptContent');
+    const rekapContent = document.getElementById('rekapContent');
+    const uptNote = document.getElementById('uptNote');
+
+    titleEl.textContent = `Grafik UPT — ${icao ? icao + ' / ' + nama : nama}`;
+    uptNote.textContent = 'Menampilkan Capaian dan Kualitas dari Januari sampai Desember.';
+
+    // show overlay as UPT chart
+    rekapContent.style.display = 'none';
+    uptContent.style.display = 'block';
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden','false');
+
+    // fetch all month sheets in parallel
+    const promises = MONTHS.map(m => {
+      const gid = sheetGIDs[m];
+      const url = SPREADSHEET_BASE + '?gid=' + gid + '&single=true&output=csv';
+      return fetch(url).then(r => r.text()).then(csv => ({ month: m, csv }));
+    });
+
+    let results;
+    try {
+      results = await Promise.all(promises);
+    } catch (err) {
+      console.error("Gagal mengambil sheet bulan:", err);
+      alert("Gagal memuat data bulan untuk Grafik UPT.");
+      return;
+    }
+
+    // parse each CSV and find row match
+    const capaianArr = [];
+    const kualitasArr = [];
+
+    for (let res of results) {
+      const parsed = Papa.parse(res.csv, { header: true, skipEmptyLines: true });
+      let matched = null;
+      for (let row of parsed.data) {
+        if (findRowMatch(row, icao, nama)) {
+          matched = row;
+          break;
+        }
+      }
+      if (matched) {
+        const rawCapaian = getValueFromRow(matched, ['Capaian','Capaian (%)','Capaian(%)','CAPAIAN']);
+        const rawKualitas = getValueFromRow(matched, ['Kualitas','Kualitas (%)','Kualitas(%)','KUALITAS']);
+        const nC = parsePercent(rawCapaian);
+        const nK = parsePercent(rawKualitas);
+        capaianArr.push(isNaN(nC) ? null : nC);
+        kualitasArr.push(isNaN(nK) ? null : nK);
+      } else {
+        capaianArr.push(null);
+        kualitasArr.push(null);
+      }
+    }
+
+    // render chart into canvas
+    const ctx = document.getElementById('uptChartCanvas').getContext('2d');
+    if (currentUPTChart) {
+      currentUPTChart.destroy();
+      currentUPTChart = null;
+    }
+
+    currentUPTChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: MONTHS,
+        datasets: [
+          {
+            label: 'Capaian (%)',
+            data: capaianArr,
+            borderWidth: 2,
+            tension: 0.2,
+            spanGaps: true,
+            borderColor: '#1f77b4',
+            backgroundColor: 'rgba(31,119,180,0.08)',
+            pointRadius: 4
+          },
+          {
+            label: 'Kualitas (%)',
+            data: kualitasArr,
+            borderWidth: 2,
+            tension: 0.2,
+            spanGaps: true,
+            borderColor: '#2ca02c',
+            backgroundColor: 'rgba(44,160,44,0.06)',
+            pointRadius: 4
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            suggestedMin: 0,
+            suggestedMax: 110,
+            title: { display:true, text: 'Persentase (%)' }
+          }
+        },
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { mode: 'index', intersect: false }
+        }
+      }
+    });
+  }
+
+  // ====== Rekap Tahunan overlay (two iframes) ======
+  function openRekap() {
+    const overlay = document.getElementById('chartOverlay');
+    const titleEl = document.getElementById('chartTitle');
+    const uptContent = document.getElementById('uptContent');
+    const rekapContent = document.getElementById('rekapContent');
+
+    // set iframes src
+    const url1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTbxYIyW6MG1Letj4_Z8d5nCZ3tR58bSFEkgcgtAktt0UHa3BK5xUwOHqmdsdVY2X9Sq7qj7cVxtvoD/pubchart?oid=17866658&format=interactive';
+    const url2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTbxYIyW6MG1Letj4_Z8d5nCZ3tR58bSFEkgcgtAktt0UHa3BK5xUwOHqmdsdVY2X9Sq7qj7cVxtvoD/pubchart?oid=646055332&format=interactive';
+    document.getElementById('rekapIframe1').src = url1;
+    document.getElementById('rekapIframe2').src = url2;
+
+    titleEl.textContent = 'Rekap Tahunan';
+    uptContent.style.display = 'none';
+    rekapContent.style.display = 'block';
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden','false');
+  }
+
+  function closeOverlay() {
+    const overlay = document.getElementById('chartOverlay');
+    overlay.classList.remove('open');
+    overlay.setAttribute('aria-hidden','true');
+    if (currentUPTChart) {
+      currentUPTChart.destroy();
+      currentUPTChart = null;
+    }
+    document.getElementById('rekapIframe1').src = '';
+    document.getElementById('rekapIframe2').src = '';
+  }
+
+  // ====== UI handling ======
+  const capaianMenu = document.getElementById('capaianMenu');
+  const kualitasMenu = document.getElementById('kualitasMenu');
+  const visualisasiMenu = document.getElementById('visualisasiMenu');
+  const bulanSelect = document.getElementById('bulan');
+
+  function setActiveMenu(selected) {
+    [capaianMenu, kualitasMenu, visualisasiMenu].forEach(el => el.classList.remove('active'));
+    if (selected) selected.classList.add('active');
+  }
+
+  // Build month dropdown for capaian/kualitas (with default "Pilih Bulan")
+  function resetBulanOptionsToMonths() {
+    bulanSelect.innerHTML = `
+      <option value="" selected disabled>Pilih Bulan</option>
+      ${MONTHS.map(m => `<option value="${m}">${m}</option>`).join('')}
+    `;
+  }
+
+  // Build dropdown for grafik mode
+  function setBulanToGrafikOptions() {
+  bulanSelect.innerHTML = `
+    <option value="" selected disabled>Pilih Visualisasi</option>
+    <option value="GrafikUPT">Grafik UPT</option>
+    <option value="RekapTahunan">Rekap Tahunan</option>
+    `;
+  }
+function clearBulanOptions() {
+  bulanSelect.innerHTML = `<option value="" selected disabled></option>`;
+  bulanSelect.style.width = "150px";
+}
+  capaianMenu.addEventListener('click', function() {
+    mode = 'capaian';
+    grafikSub = null;
+    setActiveMenu(this);
+    resetBulanOptionsToMonths();
+    // don't auto-load a month: user must choose month
+    // show neutral markers (positions from Januari as fallback)
+    loadDataAndDisplay('', { fetchPositionsFallback: true });
+    closeOverlay();
+    document.getElementById('legend').style.display = 'block';
+  });
+
+  kualitasMenu.addEventListener('click', function() {
+    mode = 'kualitas';
+    grafikSub = null;
+    setActiveMenu(this);
+    resetBulanOptionsToMonths();
+    loadDataAndDisplay('', { fetchPositionsFallback: true });
+    closeOverlay();
+    document.getElementById('legend').style.display = 'block';
+  });
+
+  visualisasiMenu.addEventListener('click', function() {
+    mode = 'grafik';
+    grafikSub = null;
+    setActiveMenu(this);
+    setBulanToGrafikOptions();
+    document.getElementById('uptNote').textContent = 'Pilih sub-grafik (Grafik UPT atau Rekap Tahunan) dari dropdown di kanan lalu klik stasiun.';
+    // hide legend in grafik mode
+    document.getElementById('legend').style.display = 'none';
+    // neutral markers
+    loadDataAndDisplay('', { fetchPositionsFallback: true });
+    closeOverlay();
+  });
+
+  bulanSelect.addEventListener('change', async function() {
+    const val = this.value;
+    if (mode === 'grafik') {
+      if (val === 'GrafikUPT') {
+        grafikSub = 'upt';
+        // show blue markers (force) so user knows they are clickable
+        await loadDataAndDisplay('Januari', { forceGrafikUPT: true, fetchPositionsFallback: true });
+        // open a short overlay hint then close
+        const overlay = document.getElementById('chartOverlay');
+        document.getElementById('chartTitle').textContent = 'Grafik UPT';
+        document.getElementById('uptContent').style.display = 'block';
+        document.getElementById('rekapContent').style.display = 'none';
+        document.getElementById('uptNote').textContent = 'Pilih lokasi untuk melihat Grafik.';
+        overlay.classList.add('open');
+        setTimeout(()=> overlay.classList.remove('open'), 1500);
+      } else if (val === 'RekapTahunan') {
+        grafikSub = 'rekap';
+        // clear markers visually then open rekap
+        stationMarkers.clearLayers();
+        openRekap();
+      }
+    } else {
+      // capaian/kualitas month selected
+      if (MONTHS.includes(val)) {
+        // load the selected month and render colored markers
+        await loadDataAndDisplay(val, { fetchPositionsFallback: false });
+      }
+    }
+  });
+
+  // overlay close
+  document.getElementById('closeChart').addEventListener('click', () => {
+    closeOverlay();
+  });
+
+  // ====== Init (on load) ======
+  window.onload = function() {
+  mode = '';
+  setActiveMenu(null);
+  clearBulanOptions(); // dropdown kosong saat awal load
+  loadDataAndDisplay('', { fetchPositionsFallback: true });
+  document.getElementById('legend').style.display = 'none';
+};
+
+  // allow ESC to close overlay
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeOverlay();
+  });
+
+</script>
+</body>
+</html>
