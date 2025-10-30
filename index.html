@@ -230,14 +230,14 @@
     if (isNaN(value)) return 'gray';
     if (mode === "capaian") {
       if (value < 95) return 'red';
-      if (value >= 95 && value <= 99) return 'green';
-      if (value === 100) return 'blue';
+      if (value >= 95 && value <= 99) return 'orange';
+      if (value === 100) return 'green';
       return 'gray';
     } else { // kualitas
       if (value < 60) return 'red';
       if (value >= 60 && value <= 79) return 'orange';
-      if (value >= 80 && value <= 99) return 'green';
-      if (value === 100) return 'blue';
+      if (value >= 80 && value <= 99) return 'blue';
+      if (value === 100) return 'green';
       return 'gray';
     }
   }
@@ -250,8 +250,8 @@
         <div class="legend-title">Keterangan Capaian ${bulan}:</div>
         <div><span style="display:inline-block;width:14px;height:14px;background:gray;border-radius:50%;margin-right:8px;"></span> Data kosong : ${counts.gray||0}</div>
         <div><span style="display:inline-block;width:14px;height:14px;background:red;border-radius:50%;margin-right:8px;"></span> &lt; 95% : ${counts.red||0}</div>
-        <div><span style="display:inline-block;width:14px;height:14px;background:green;border-radius:50%;margin-right:8px;"></span> 95% - 99% : ${counts.green||0}</div>
-        <div><span style="display:inline-block;width:14px;height:14px;background:blue;border-radius:50%;margin-right:8px;"></span> 100% : ${counts.blue||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:orange;border-radius:50%;margin-right:8px;"></span> 95% - 99% : ${counts.orange||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:green;border-radius:50%;margin-right:8px;"></span> 100% : ${counts.green||0}</div>
       `;
     } else if (mode === "kualitas") {
       legend.innerHTML = `
@@ -259,8 +259,8 @@
         <div><span style="display:inline-block;width:14px;height:14px;background:gray;border-radius:50%;margin-right:8px;"></span> Data kosong : ${counts.gray||0}</div>
         <div><span style="display:inline-block;width:14px;height:14px;background:red;border-radius:50%;margin-right:8px;"></span> &lt; 60% : ${counts.red||0}</div>
         <div><span style="display:inline-block;width:14px;height:14px;background:orange;border-radius:50%;margin-right:8px;"></span> 60% - 79% : ${counts.orange||0}</div>
-        <div><span style="display:inline-block;width:14px;height:14px;background:green;border-radius:50%;margin-right:8px;"></span> 80% - 99% : ${counts.green||0}</div>
-        <div><span style="display:inline-block;width:14px;height:14px;background:blue;border-radius:50%;margin-right:8px;"></span> 100% : ${counts.blue||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:blue;border-radius:50%;margin-right:8px;"></span> 80% - 99% : ${counts.blue||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:green;border-radius:50%;margin-right:8px;"></span> 100% : ${counts.green||0}</div>
       `;
     } else {
       legend.innerHTML = '';
@@ -272,7 +272,7 @@
   // options.forceGrafikUPT: boolean to force blue markers (used when user picks GrafikUPT)
   async function loadDataAndDisplay(bulan = '', options = {}) {
     stationMarkers.clearLayers();
-    const counts = { gray: 0, red: 0, orange: 0, green: 0, blue: 0 };
+    const counts = { gray: 0, red: 0, orange: 0, blue: 0, green: 0 };
 
     // Decide if we should fetch real sheet: if bulan is valid month OR if forcing to show positions (like for GrafikUPT)
     let gidToUse = null;
@@ -375,8 +375,8 @@ marker.bindTooltip(`${icao ? icao + ' - ' : ''}${nama}`, {
             if (color === 'gray') counts.gray++;
             else if (color === 'red') counts.red++;
             else if (color === 'orange') counts.orange++;
-            else if (color === 'green') counts.green++;
             else if (color === 'blue') counts.blue++;
+            else if (color === 'green') counts.green++;
           }
         }
       });
