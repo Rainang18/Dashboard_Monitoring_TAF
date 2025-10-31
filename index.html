@@ -229,15 +229,15 @@
   function getColor(value) {
     if (isNaN(value)) return 'gray';
     if (mode === "capaian") {
-      if (value < 95) return 'red';
-      if (value >= 95 && value <= 99) return 'orange';
-      if (value === 100) return 'green';
+      if (value < 95) return '#E53935';
+      if (value >= 95 && value <= 99) return '#FBC02D';
+      if (value === 100) return '#43A047';
       return 'gray';
     } else { // kualitas
-      if (value < 60) return 'red';
-      if (value >= 60 && value <= 79) return 'orange';
-      if (value >= 80 && value <= 99) return 'blue';
-      if (value === 100) return 'green';
+      if (value < 60) return '#E53935';
+      if (value >= 60 && value <= 79) return '#FBC02D';
+      if (value >= 80 && value <= 99) return '#1976D2';
+      if (value === 100) return '#43A047';
       return 'gray';
     }
   }
@@ -249,18 +249,18 @@
       legend.innerHTML = `
         <div class="legend-title">Keterangan Capaian ${bulan}:</div>
         <div><span style="display:inline-block;width:14px;height:14px;background:gray;border-radius:50%;margin-right:8px;"></span> Data kosong : ${counts.gray||0}</div>
-        <div><span style="display:inline-block;width:14px;height:14px;background:red;border-radius:50%;margin-right:8px;"></span> &lt; 95% : ${counts.red||0}</div>
-        <div><span style="display:inline-block;width:14px;height:14px;background:orange;border-radius:50%;margin-right:8px;"></span> 95% - 99% : ${counts.orange||0}</div>
-        <div><span style="display:inline-block;width:14px;height:14px;background:green;border-radius:50%;margin-right:8px;"></span> 100% : ${counts.green||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:#E53935;border-radius:50%;margin-right:8px;"></span> &lt; 95% : ${counts.red||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:#FBC02D;border-radius:50%;margin-right:8px;"></span> 95% - 99% : ${counts.orange||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:#43A047;border-radius:50%;margin-right:8px;"></span> 100% : ${counts.green||0}</div>
       `;
     } else if (mode === "kualitas") {
       legend.innerHTML = `
         <div class="legend-title">Keterangan Kualitas ${bulan}:</div>
         <div><span style="display:inline-block;width:14px;height:14px;background:gray;border-radius:50%;margin-right:8px;"></span> Data kosong : ${counts.gray||0}</div>
-        <div><span style="display:inline-block;width:14px;height:14px;background:red;border-radius:50%;margin-right:8px;"></span> &lt; 60% : ${counts.red||0}</div>
-        <div><span style="display:inline-block;width:14px;height:14px;background:orange;border-radius:50%;margin-right:8px;"></span> 60% - 79% : ${counts.orange||0}</div>
-        <div><span style="display:inline-block;width:14px;height:14px;background:blue;border-radius:50%;margin-right:8px;"></span> 80% - 99% : ${counts.blue||0}</div>
-        <div><span style="display:inline-block;width:14px;height:14px;background:green;border-radius:50%;margin-right:8px;"></span> 100% : ${counts.green||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:#E53935;border-radius:50%;margin-right:8px;"></span> &lt; 60% : ${counts.red||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:#FBC02D;border-radius:50%;margin-right:8px;"></span> 60% - 79% : ${counts.orange||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:#1976D2;border-radius:50%;margin-right:8px;"></span> 80% - 99% : ${counts.blue||0}</div>
+        <div><span style="display:inline-block;width:14px;height:14px;background:#43A047;border-radius:50%;margin-right:8px;"></span> 100% : ${counts.green||0}</div>
       `;
     } else {
       legend.innerHTML = '';
@@ -339,28 +339,28 @@ marker.bindTooltip(`${icao ? icao + ' - ' : ''}${nama}`, {
           marker.customData = { icao, nama, row };
 
           // attach popup / click handlers depending on mode
-          if (mode === "capaian" || mode === "kualitas") {
-            // popup detailed
-            let popupContent = `<b>${icao} (${nama})</b><br><table style="font-size:13px; border-collapse:collapse; margin-top:5px;">`;
-            if (mode === "capaian") {
-              popupContent += `<tr><td><b>Target</b></td><td>: ${row.Target || '-'}</td></tr>`;
-              popupContent += `<tr><td><b>Existing</b></td><td>: ${row.Existing || '-'}</td></tr>`;
-              popupContent += `<tr><td><b>Capaian</b></td><td>: ${isNaN(nilai) ? '-' : nilai + '%'}</td></tr>`;
-            } else {
-              popupContent += `<tr><td><b>Tanggal dan Jam</b></td><td>: ${row['Tanggal dan Jam'] || '-'}</td></tr>`;
-              popupContent += `<tr><td><b>Angin</b></td><td>: ${row['Angin'] || '-'}</td></tr>`;
-              popupContent += `<tr><td><b>Visibility</b></td><td>: ${row['Visibility'] || '-'}</td></tr>`;
-              popupContent += `<tr><td><b>Weather</b></td><td>: ${row['Weather'] || '-'}</td></tr>`;
-              popupContent += `<tr><td><b>Cloud</b></td><td>: ${row['Cloud'] || '-'}</td></tr>`;
-              popupContent += `<tr><td><b>Kecenderungan Perubahan</b></td><td>: ${row['Kecenderungan Perubahan'] || '-'}</td></tr>`;
-              popupContent += `<tr><td><b>Penutup</b></td><td>: ${row['Penutup'] || '-'}</td></tr>`;
-              popupContent += `<tr><td><b>Spasi</b></td><td>: ${row['Spasi'] || '-'}</td></tr>`;
-              popupContent += `<tr><td><b>Jumlah Kesalahan</b></td><td>: ${row['Jumlah Kesalahan'] || '-'}</td></tr>`;
-              popupContent += `<tr><td><b>Kualitas</b></td><td>: ${isNaN(parsePercent(getValueFromRow(row, ['Kualitas','Kualitas (%)','Kualitas(%)','KUALITAS']))) ? '-' : parsePercent(getValueFromRow(row, ['Kualitas','Kualitas (%)','Kualitas(%)','KUALITAS'])) + '%'}</td></tr>`;
-              if (row['Link Data']) popupContent += `<tr><td colspan="2" style="padding-top:6px;"><a href="${row['Link Data']}" target="_blank">📄 Lihat Data</a></td></tr>`;
-            }
-            popupContent += '</table>';
-            marker.bindPopup(popupContent);
+          if ((mode === "capaian" || mode === "kualitas") && MONTHS.includes(bulan)) {
+  // hanya buat popup kalau bulan sudah dipilih
+  let popupContent = `<b>${icao} (${nama})</b><br><table style="font-size:13px; border-collapse:collapse; margin-top:5px;">`;
+  if (mode === "capaian") {
+    popupContent += `<tr><td><b>Target</b></td><td>: ${row.Target || '-'}</td></tr>`;
+    popupContent += `<tr><td><b>Existing</b></td><td>: ${row.Existing || '-'}</td></tr>`;
+    popupContent += `<tr><td><b>Capaian</b></td><td>: ${isNaN(nilai) ? '-' : nilai + '%'}</td></tr>`;
+  } else {
+    popupContent += `<tr><td><b>Tanggal dan Jam</b></td><td>: ${row['Tanggal dan Jam'] || '-'}</td></tr>`;
+    popupContent += `<tr><td><b>Angin</b></td><td>: ${row['Angin'] || '-'}</td></tr>`;
+    popupContent += `<tr><td><b>Visibility</b></td><td>: ${row['Visibility'] || '-'}</td></tr>`;
+    popupContent += `<tr><td><b>Weather</b></td><td>: ${row['Weather'] || '-'}</td></tr>`;
+    popupContent += `<tr><td><b>Cloud</b></td><td>: ${row['Cloud'] || '-'}</td></tr>`;
+    popupContent += `<tr><td><b>Kecenderungan Perubahan</b></td><td>: ${row['Kecenderungan Perubahan'] || '-'}</td></tr>`;
+    popupContent += `<tr><td><b>Penutup</b></td><td>: ${row['Penutup'] || '-'}</td></tr>`;
+    popupContent += `<tr><td><b>Spasi</b></td><td>: ${row['Spasi'] || '-'}</td></tr>`;
+    popupContent += `<tr><td><b>Jumlah Kesalahan</b></td><td>: ${row['Jumlah Kesalahan'] || '-'}</td></tr>`;
+    popupContent += `<tr><td><b>Kualitas</b></td><td>: ${isNaN(parsePercent(getValueFromRow(row, ['Kualitas','Kualitas (%)','Kualitas(%)','KUALITAS']))) ? '-' : parsePercent(getValueFromRow(row, ['Kualitas','Kualitas (%)','Kualitas(%)','KUALITAS'])) + '%'}</td></tr>`;
+    if (row['Link Data']) popupContent += `<tr><td colspan="2" style="padding-top:6px;"><a href="${row['Link Data']}" target="_blank">📄 Lihat Data</a></td></tr>`;
+  }
+  popupContent += '</table>';
+  marker.bindPopup(popupContent);
           } else if (mode === 'grafik' && grafikSub === 'upt') {
             // grafik upt: clicking marker opens UPT chart
             marker.on('click', async function(e) {
@@ -373,10 +373,10 @@ marker.bindTooltip(`${icao ? icao + ' - ' : ''}${nama}`, {
           // count legend for capaian/kualitas only when actual month selected
           if (MONTHS.includes(bulan) && !(mode === 'grafik' && grafikSub === 'upt')) {
             if (color === 'gray') counts.gray++;
-            else if (color === 'red') counts.red++;
-            else if (color === 'orange') counts.orange++;
-            else if (color === 'blue') counts.blue++;
-            else if (color === 'green') counts.green++;
+            else if (color === '#E53935') counts.red++;
+            else if (color === '#FBC02D') counts.orange++;
+            else if (color === '#1976D2') counts.blue++;
+            else if (color === '#43A047') counts.green++;
           }
         }
       });
