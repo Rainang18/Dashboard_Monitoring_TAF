@@ -191,7 +191,7 @@
   const MONTHS = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
   // mode: '', 'capaian', 'kualitas', 'grafik'
-  let mode = '';
+  let mode = 'capaian';
   let grafikSub = null; // 'upt'|'rekap'
   let currentUPTChart = null;
 
@@ -552,11 +552,12 @@ marker.bindTooltip(`${icao ? icao + ' - ' : ''}${nama}`, {
 
   // Build month dropdown for capaian/kualitas (with default "Pilih Bulan")
   function resetBulanOptionsToMonths() {
-    bulanSelect.innerHTML = `
-      <option value="" selected disabled>Pilih Bulan</option>
-      ${MONTHS.map(m => `<option value="${m}">${m}</option>`).join('')}
-    `;
-  }
+  bulanSelect.innerHTML = `
+    <option value="" disabled>Pilih Bulan</option>
+    ${MONTHS.map(m => `<option value="${m}">${m}</option>`).join('')}
+  `;
+  bulanSelect.value = "September"; // <-- Tambahan
+}
 
   // Build dropdown for grafik mode
   function setBulanToGrafikOptions() {
@@ -575,19 +576,21 @@ function clearBulanOptions() {
     grafikSub = null;
     setActiveMenu(this);
     resetBulanOptionsToMonths();
-    // don't auto-load a month: user must choose month
-    // show neutral markers (positions from Januari as fallback)
-    loadDataAndDisplay('', { fetchPositionsFallback: true });
+
+    bulanSelect.value = "September";              // ✅ atur bulan awal
+    loadDataAndDisplay("September");              // ✅ langsung tampilkan
+
     closeOverlay();
-    document.getElementById('legend').style.display = 'block';
-  });
+    document.getElementById('legend').style.display = 'block'; // ✅ legenda tetap tampil
+});
 
   kualitasMenu.addEventListener('click', function() {
     mode = 'kualitas';
     grafikSub = null;
     setActiveMenu(this);
     resetBulanOptionsToMonths();
-    loadDataAndDisplay('', { fetchPositionsFallback: true });
+    bulanSelect.value = "September";              // ✅ atur bulan awal
+    loadDataAndDisplay("September");
     closeOverlay();
     document.getElementById('legend').style.display = 'block';
   });
@@ -642,11 +645,19 @@ function clearBulanOptions() {
 
   // ====== Init (on load) ======
   window.onload = function() {
-  mode = '';
-  setActiveMenu(null);
-  clearBulanOptions(); // dropdown kosong saat awal load
-  loadDataAndDisplay('', { fetchPositionsFallback: true });
-  document.getElementById('legend').style.display = 'none';
+  mode = 'capaian';
+
+  // aktifkan menu capaian
+  setActiveMenu(capaianMenu);
+
+  // isi dropdown
+  resetBulanOptionsToMonths();
+
+  // set bulan = September
+  bulanSelect.value = "September";
+
+  // langsung tampilkan data bulan September
+  loadDataAndDisplay("September");
 };
 
   // allow ESC to close overlay
