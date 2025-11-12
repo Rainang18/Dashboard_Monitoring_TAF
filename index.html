@@ -93,7 +93,29 @@
     .close-btn {
       background: #fff; border: 0; color: #d33; font-size: 20px; cursor: pointer;
     }
+.rekap-tahunan-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
 
+.rekap-tahunan-item iframe {
+    height: 350px;
+}
+
+/* ✅ Rekap Kesalahan (1 grafik, full, TANPA SCROLL) */
+.rekap-kesalahan-item {
+    padding-top: 0 !important;    
+    margin-top: 0 !important;
+}
+
+.rekap-kesalahan-item iframe {
+    height: 480px !important;        /* tinggi tetap */
+    margin-top: -10px !important;    /* posisi vertikal */
+    margin-left: 7%;                 /* geser ke kiri agar lebih ke tengah */
+    width: 86% !important;           /* kecilkan sedikit supaya proporsional */
+    display: block;
+}
     /* UPT chart area */
     .upt-chart-area { width:100%; }
     .upt-chart-area canvas { width:100% !important; height:360px !important; }
@@ -508,37 +530,106 @@ marker.bindTooltip(`${icao ? icao + ' - ' : ''}${nama}`, {
   }
 
   // ====== Rekap Tahunan overlay (two iframes) ======
-  function openRekap() {
-    const overlay = document.getElementById('chartOverlay');
-    const titleEl = document.getElementById('chartTitle');
-    const uptContent = document.getElementById('uptContent');
-    const rekapContent = document.getElementById('rekapContent');
+ function openRekap() {
+  const overlay = document.getElementById('chartOverlay');
+  const titleEl = document.getElementById('chartTitle');
+  const uptContent = document.getElementById('uptContent');
+  const rekapContent = document.getElementById('rekapContent');
 
-    // set iframes src
-    const url1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTbxYIyW6MG1Letj4_Z8d5nCZ3tR58bSFEkgcgtAktt0UHa3BK5xUwOHqmdsdVY2X9Sq7qj7cVxtvoD/pubchart?oid=17866658&format=interactive';
-    const url2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTbxYIyW6MG1Letj4_Z8d5nCZ3tR58bSFEkgcgtAktt0UHa3BK5xUwOHqmdsdVY2X9Sq7qj7cVxtvoD/pubchart?oid=646055332&format=interactive';
-    document.getElementById('rekapIframe1').src = url1;
-    document.getElementById('rekapIframe2').src = url2;
+  // set iframe
+  const url1 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTbxYIyW6MG1Letj4_Z8d5nCZ3tR58bSFEkgcgtAktt0UHa3BK5xUwOHqmdsdVY2X9Sq7qj7cVxtvoD/pubchart?oid=17866658&format=interactive';
+  const url2 = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTbxYIyW6MG1Letj4_Z8d5nCZ3tR58bSFEkgcgtAktt0UHa3BK5xUwOHqmdsdVY2X9Sq7qj7cVxtvoD/pubchart?oid=646055332&format=interactive';
 
-    titleEl.textContent = 'Rekap Tahunan';
-    uptContent.style.display = 'none';
-    rekapContent.style.display = 'block';
-    overlay.classList.add('open');
-    overlay.setAttribute('aria-hidden','false');
+  document.getElementById('rekapIframe1').src = url1;
+  document.getElementById('rekapIframe2').src = url2;
+
+  // ubah layout → mode tahunan
+  const grid = document.querySelector('.rekap-grid');
+  const items = document.querySelectorAll('.rekap-item');
+
+  grid.classList.remove('rekap-kesalahan-grid');
+  grid.classList.add('rekap-tahunan-grid');
+
+  items.forEach(i => {
+    i.classList.remove('rekap-kesalahan-item');
+    i.classList.add('rekap-tahunan-item');
+    i.style.display = "block";
+  });
+
+  // tampilkan 2 grafik
+  document.getElementById('rekapIframe2').style.display = "block";
+
+  titleEl.textContent = 'Rekap Tahunan Capaian & Kualitas';
+
+  uptContent.style.display = 'none';
+  rekapContent.style.display = 'block';
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+}
+
+// ====================================
+// REKAP KESALAHAN (1 grafik, full)
+// ====================================
+function openRekapKesalahan() {
+  const overlay = document.getElementById('chartOverlay');
+  const titleEl = document.getElementById('chartTitle');
+  const uptContent = document.getElementById('uptContent');
+  const rekapContent = document.getElementById('rekapContent');
+
+  const kesalahanURL =
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vSprSDnSyYZTJKxkPvE2GeciNxDzo2aOO8urkZkFZ9XYuYamwQltLRr3zHR0z-HjoY3egsi6LZPZSjE/pubchart?oid=1707455876&format=interactive';
+
+  const iframe1 = document.getElementById('rekapIframe1');
+  const iframe2 = document.getElementById('rekapIframe2');
+
+  iframe1.src = kesalahanURL;
+
+  // mode kesalahan → layout 1 grafik
+  const grid = document.querySelector('.rekap-grid');
+  const items = document.querySelectorAll('.rekap-item');
+
+  grid.classList.remove('rekap-tahunan-grid');
+  grid.classList.add('rekap-kesalahan-grid');
+
+  items.forEach(i => {
+    i.classList.remove('rekap-tahunan-item');
+    i.classList.add('rekap-kesalahan-item');
+  });
+
+  iframe2.style.display = "none";
+  iframe2.parentElement.style.display = "none";
+
+  titleEl.textContent = 'Rekap Sebaran Kesalahan Selama 1 Tahun';
+
+  uptContent.style.display = 'none';
+  rekapContent.style.display = 'block';
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+}
+
+// ======================
+// Tutup Overlay
+// ======================
+function closeOverlay() {
+  const overlay = document.getElementById('chartOverlay');
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+
+  if (currentUPTChart) {
+    currentUPTChart.destroy();
+    currentUPTChart = null;
   }
 
-  function closeOverlay() {
-    const overlay = document.getElementById('chartOverlay');
-    overlay.classList.remove('open');
-    overlay.setAttribute('aria-hidden','true');
-    if (currentUPTChart) {
-      currentUPTChart.destroy();
-      currentUPTChart = null;
-    }
-    document.getElementById('rekapIframe1').src = '';
-    document.getElementById('rekapIframe2').src = '';
-  }
+  const iframe1 = document.getElementById('rekapIframe1');
+  const iframe2 = document.getElementById('rekapIframe2');
 
+  iframe1.src = '';
+  iframe2.src = '';
+
+  // kembalikan layout default
+  iframe2.style.display = "block";
+  iframe2.parentElement.style.display = "block";
+}
   // ====== UI handling ======
   const capaianMenu = document.getElementById('capaianMenu');
   const kualitasMenu = document.getElementById('kualitasMenu');
@@ -565,100 +656,78 @@ marker.bindTooltip(`${icao ? icao + ' - ' : ''}${nama}`, {
     <option value="" selected disabled>Pilih Visualisasi</option>
     <option value="GrafikUPT">Grafik UPT</option>
     <option value="RekapTahunan">Rekap Tahunan</option>
-    `;
-  }
+    <option value="RekapKesalahan">Rekap Kesalahan</option>   <!-- ✅ BARU -->
+  `;
+}
 function clearBulanOptions() {
   bulanSelect.innerHTML = `<option value="" selected disabled></option>`;
   bulanSelect.style.width = "150px";
 }
-  capaianMenu.addEventListener('click', function() {
+ capaianMenu.addEventListener('click', function() {
     mode = 'capaian';
     grafikSub = null;
     setActiveMenu(this);
     resetBulanOptionsToMonths();
 
-    bulanSelect.value = "September";              // ✅ atur bulan awal
-    loadDataAndDisplay("September");              // ✅ langsung tampilkan
+    bulanSelect.value = "September";  
+    loadDataAndDisplay("September");  
 
     closeOverlay();
-    document.getElementById('legend').style.display = 'block'; // ✅ legenda tetap tampil
 });
 
-  kualitasMenu.addEventListener('click', function() {
+kualitasMenu.addEventListener('click', function() {
     mode = 'kualitas';
     grafikSub = null;
     setActiveMenu(this);
     resetBulanOptionsToMonths();
-    bulanSelect.value = "September";              // ✅ atur bulan awal
-    loadDataAndDisplay("September");
-    closeOverlay();
-    document.getElementById('legend').style.display = 'block';
-  });
 
-  visualisasiMenu.addEventListener('click', function() {
+    bulanSelect.value = "September";
+    loadDataAndDisplay("September");
+
+    closeOverlay();
+});
+
+visualisasiMenu.addEventListener('click', function() {
     mode = 'grafik';
     grafikSub = null;
     setActiveMenu(this);
     setBulanToGrafikOptions();
-    document.getElementById('uptNote').textContent = 'Pilih sub-grafik (Grafik UPT atau Rekap Tahunan) dari dropdown di kanan lalu klik stasiun.';
-    // hide legend in grafik mode
-    document.getElementById('legend').style.display = 'none';
-    // neutral markers
+
     loadDataAndDisplay('', { fetchPositionsFallback: true });
-    closeOverlay();
-  });
 
-  bulanSelect.addEventListener('change', async function() {
+    closeOverlay();
+});
+
+bulanSelect.addEventListener('change', async function() {
     const val = this.value;
+
     if (mode === 'grafik') {
-      if (val === 'GrafikUPT') {
-        grafikSub = 'upt';
-        // show blue markers (force) so user knows they are clickable
-        await loadDataAndDisplay('Januari', { forceGrafikUPT: true, fetchPositionsFallback: true });
-        // open a short overlay hint then close
-        const overlay = document.getElementById('chartOverlay');
-        document.getElementById('chartTitle').textContent = 'Grafik UPT';
-        document.getElementById('uptContent').style.display = 'block';
-        document.getElementById('rekapContent').style.display = 'none';
-        document.getElementById('uptNote').textContent = 'Pilih lokasi untuk melihat Grafik.';
-        overlay.classList.add('open');
-        setTimeout(()=> overlay.classList.remove('open'), 1500);
-      } else if (val === 'RekapTahunan') {
-        grafikSub = 'rekap';
-        // clear markers visually then open rekap
-        stationMarkers.clearLayers();
-        openRekap();
-      }
-    } else {
-      // capaian/kualitas month selected
-      if (MONTHS.includes(val)) {
-        // load the selected month and render colored markers
-        await loadDataAndDisplay(val, { fetchPositionsFallback: false });
-      }
+        if (val === 'GrafikUPT') {
+            grafikSub = 'upt';
+            loadDataAndDisplay('', { fetchPositionsFallback: true, forceGrafikUPT: true });
+        } else if (val === 'RekapTahunan') {
+            grafikSub = 'rekap';
+            openRekap();
+        } else if (val === 'RekapKesalahan') {
+            grafikSub = 'rekap_kesalahan';
+            openRekapKesalahan();
+        }
+        return;
     }
-  });
 
-  // overlay close
-  document.getElementById('closeChart').addEventListener('click', () => {
-    closeOverlay();
-  });
+    if (MONTHS.includes(val)) {
+        loadDataAndDisplay(val);
+    }
+});
 
-  // ====== Init (on load) ======
-  window.onload = function() {
-  mode = 'capaian';
+document.getElementById('closeChart').addEventListener('click', closeOverlay);
 
-  // aktifkan menu capaian
-  setActiveMenu(capaianMenu);
-
-  // isi dropdown
-  resetBulanOptionsToMonths();
-
-  // set bulan = September
-  bulanSelect.value = "September";
-
-  // langsung tampilkan data bulan September
-  loadDataAndDisplay("September");
-};
+// Default awal: mode capaian, September
+mode = 'capaian';
+setActiveMenu(capaianMenu);
+resetBulanOptionsToMonths();
+bulanSelect.value = 'September';
+loadDataAndDisplay('September');
 
   // allow ESC to close overlay
   document.addEventListener('keydown', (e) => {
